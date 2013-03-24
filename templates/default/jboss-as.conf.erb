@@ -1,0 +1,39 @@
+# General configuration for the init.d scripts,
+# not necessarily for JBoss AS itself.
+
+export JRUBY_HOME=<%= node[:rbenv][:root_path] %>/versions/<%= node[:torquebox][:rbenv_version] || node[:rbenv][:global] %>
+export TORQUEBOX_HOME=<%= node[:torquebox][:dir] %>/home
+
+JBOSS_HOME=$TORQUEBOX_HOME/jboss
+
+# The username who should own the process.
+#
+JBOSS_USER=<%= node[:torquebox][:user] %>
+
+# The amount of time to wait for startup
+#
+# STARTUP_WAIT=30
+
+# The amount of time to wait for shutdown
+#
+# SHUTDOWN_WAIT=30
+
+# Location to keep the console log
+#
+# JBOSS_CONSOLE_LOG=/var/log/jboss-as/console.log
+
+<% if(node[:torquebox][:clustered]) %>
+JBOSS_CONFIG=standalone-ha.xml
+<% else %>
+JBOSS_CONFIG=standalone.xml
+<% end %>
+
+JBOSS_OPTS="<%= node[:torquebox][:jboss_opts].join(" ") %>"
+
+<% if(node[:torquebox][:bind_ip]) %>
+JBOSS_OPTS="$JBOSS_OPTS -b <%= node[:torquebox][:bind_ip] %>"
+<% end %>
+
+<% if(node[:torquebox][:http_port]) %>
+JBOSS_OPTS="$JBOSS_OPTS -Dhttp.port=<%= node[:torquebox][:http_port] %>"
+<% end %>
