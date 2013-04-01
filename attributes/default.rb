@@ -5,6 +5,7 @@ default[:torquebox][:log_dir] = "/var/log/jboss-as"
 default[:torquebox][:rbenv_version] = nil
 
 default[:torquebox][:jboss_opts] = []
+default[:torquebox][:append_java_opts] = []
 default[:torquebox][:clustered] = false
 default[:torquebox][:http_port] = nil
 default[:torquebox][:max_threads] = nil
