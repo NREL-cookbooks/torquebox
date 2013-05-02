@@ -16,6 +16,24 @@ user node[:torquebox][:user] do
   home node[:torquebox][:dir]
 end
 
+# Setup the deployments directory outside of the torquebox installation
+# directory so that on upgrades the apps are persisted.
+directory "#{node[:torquebox][:dir]}/deployments" do
+  recursive true
+  owner node[:torquebox][:user]
+  group(node[:common_writable_group] || "root")
+  mode "0775"
+  action :create
+end
+
+directory node[:torquebox][:log_dir] do
+  recursive true
+  owner node[:torquebox][:user]
+  group "root"
+  mode "0755"
+  action :create
+end
+
 # Install the server via a gem so we can reuse our existing rbenv JRuby system
 # install. This also allows us to upgrade the version of JRuby prior to a new,
 # official TorqueBox package being released (useful when JRuby security updates
@@ -29,24 +47,6 @@ rbenv_gem "torquebox-server" do
 
   notifies :run, "rbenv_script[setup-torquebox-gem-install]", :immediately
   notifies :restart, "service[jboss-as]"
-end
-
-# Setup the deployments directory outside of the torquebox installation
-# directory so that on upgrades the apps are persisted.
-directory "#{node[:torquebox][:dir]}/deployments" do
-  recursive true
-  owner node[:torquebox][:user]
-  group(node[:common_writable_group] || "torquebox")
-  mode "0775"
-  action :create
-end
-
-directory node[:torquebox][:log_dir] do
-  recursive true
-  owner node[:torquebox][:user]
-  group "root"
-  mode "0755"
-  action :create
 end
 
 # Make a few tweaks to the gem-based installation.
