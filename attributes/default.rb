@@ -10,3 +10,6 @@ default[:torquebox][:clustered] = false
 default[:torquebox][:http_port] = nil
 default[:torquebox][:max_threads] = nil
 default[:torquebox][:bind_ip] = nil
+
+default[:torquebox][:clustered] = false
+default[:torquebox][:multicast] = false

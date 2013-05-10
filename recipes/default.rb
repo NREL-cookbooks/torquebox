@@ -10,6 +10,23 @@
 include_recipe "java"
 include_recipe "rbenv::system"
 
+if(node[:torquebox][:clustered] && !node[:torquebox][:multicast])
+  if Chef::Config[:solo]
+    abort("Torquebox clustering without multicast requires chef search. Chef Solo does not support search.")
+  end
+
+  if(!node[:torquebox][:cluster_name])
+    abort("Torquebox clustering without multicast requires the 'cluster_name' attribute to be set.")
+  end
+
+  peer_nodes = search(:node, "torquebox_clustered:true AND \
+    torquebox_cluster_name:#{node[:torquebox][:cluster_name]} AND \
+    chef_environment:#{node.chef_environment}")
+
+  node.set[:torquebox][:peers] = peer_nodes.map { |peer| peer[:fqdn] }
+  node.set[:torquebox][:peers].delete(node[:fqdn])
+end
+
 user node[:torquebox][:user] do
   system true
   shell "/bin/false"
@@ -87,6 +104,16 @@ rbenv_script "setup-torquebox-gem-install" do
     rm -f #{node[:torquebox][:dir]}/home
     ln -s $TORQUEBOX_HOME #{node[:torquebox][:dir]}/home
   EOS
+end
+
+if(node[:torquebox][:clustered])
+  template "#{node[:torquebox][:dir]}/home/jboss/standalone/configuration/standalone-ha.xml" do
+    source "standalone-ha.xml.erb"
+    mode "0644"
+    user node[:torquebox][:user]
+    group "root"
+    notifies :restart, "service[jboss-as]"
+  end
 end
 
 directory "/etc/jboss-as" do
