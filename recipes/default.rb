@@ -45,6 +45,10 @@ rbenv_gem "torquebox-server" do
 
   version node[:torquebox][:version]
 
+  # The big torquebox-server gem isn't available at rubygems.org:
+  # http://torquebox.org/news/2013/05/07/torquebox-2-3-1-released/
+  source "http://torquebox.org/rubygems"
+
   notifies :run, "rbenv_script[setup-torquebox-gem-install]", :immediately
   notifies :restart, "service[jboss-as]"
 end

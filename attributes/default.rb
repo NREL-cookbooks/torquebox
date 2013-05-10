@@ -1,5 +1,5 @@
 default[:torquebox][:user] = "jboss-as"
-default[:torquebox][:version] = "2.3.0"
+default[:torquebox][:version] = "2.3.1"
 default[:torquebox][:dir] = "/opt/torquebox"
 default[:torquebox][:log_dir] = "/var/log/jboss-as"
 default[:torquebox][:rbenv_version] = nil
