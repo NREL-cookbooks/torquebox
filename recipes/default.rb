@@ -10,6 +10,13 @@
 include_recipe "java"
 include_recipe "rbenv::system"
 
+node.set_unless[:torquebox][:bind_ip] = node[:ipaddress]
+
+hostsfile_entry node[:torquebox][:bind_ip] do
+  hostname "local-torquebox-ip"
+  action :create
+end
+
 if(node[:torquebox][:clustered] && !node[:torquebox][:multicast])
   if Chef::Config[:solo]
     abort("Torquebox clustering without multicast requires chef search. Chef Solo does not support search.")
@@ -23,8 +30,8 @@ if(node[:torquebox][:clustered] && !node[:torquebox][:multicast])
     torquebox_cluster_name:#{node[:torquebox][:cluster_name]} AND \
     chef_environment:#{node.chef_environment}")
 
-  node.set[:torquebox][:peers] = peer_nodes.map { |peer| peer[:fqdn] }
-  node.set[:torquebox][:peers].delete(node[:fqdn])
+  node.set[:torquebox][:peers] = peer_nodes.map { |peer| peer[:ipaddress] }
+  node.set[:torquebox][:peers].delete(node[:ipaddress])
 end
 
 user node[:torquebox][:user] do

@@ -13,3 +13,6 @@ default[:torquebox][:bind_ip] = nil
 
 default[:torquebox][:clustered] = false
 default[:torquebox][:multicast] = false
+
+default[:torquebox][:backstage][:username] = "torquebox"
+default[:torquebox][:backstage][:password] = nil
