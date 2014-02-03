@@ -2,7 +2,7 @@
 # not necessarily for JBoss AS itself.
 
 export JRUBY_HOME=<%= node[:rbenv][:root_path] %>/versions/<%= node[:torquebox][:rbenv_version] || node[:rbenv][:global] %>
-export TORQUEBOX_HOME=<%= node[:torquebox][:dir] %>/home
+export TORQUEBOX_HOME=<%= node[:torquebox][:dir] %>
 
 JBOSS_HOME=$TORQUEBOX_HOME/jboss
 

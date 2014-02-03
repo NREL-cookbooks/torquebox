@@ -17,7 +17,7 @@ export JAVA_HOME
 
 # Load JBoss AS init.d configuration.
 if [ -z "$JBOSS_CONF" ]; then
-  JBOSS_CONF="/etc/jboss-as/jboss-as.conf"
+  JBOSS_CONF="<%= node[:torquebox][:conf_dir] %>/jboss-as.conf"
 fi
 
 [ -r "$JBOSS_CONF" ] && . "${JBOSS_CONF}"
@@ -35,7 +35,7 @@ fi
 export JBOSS_PIDFILE
 
 if [ -z "$JBOSS_CONSOLE_LOG" ]; then
-  JBOSS_CONSOLE_LOG=/var/log/jboss-as/console.log
+  JBOSS_CONSOLE_LOG=<%= node[:torquebox][:log_dir] %>/console.log
 fi
 
 if [ -z "$STARTUP_WAIT" ]; then
@@ -98,7 +98,7 @@ start() {
 
   until [ $count -gt $STARTUP_WAIT ]
   do
-    grep 'JBoss AS.*started in' $JBOSS_CONSOLE_LOG > /dev/null 
+    grep 'JBAS015874:' $JBOSS_CONSOLE_LOG > /dev/null 
     if [ $? -eq 0 ] ; then
       launched=true
       break

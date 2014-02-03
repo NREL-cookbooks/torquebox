@@ -28,31 +28,26 @@ end
 node.set_unless[:torquebox][:backstage][:password] = password || secure_password
 
 rbenv_gem "torquebox-backstage" do
-  if node[:torquebox][:rbenv_version]
-    rbenv_version node[:torquebox][:rbenv_version]
-  end
-
+  rbenv_version node[:torquebox][:rbenv_version]
   version node[:torquebox][:backstage][:version]
-
   notifies :run, "rbenv_script[torquebox-backstage-deploy]", :immediately
 end
 
 rbenv_script "torquebox-backstage-deploy" do
-  if File.exists?("#{node[:torquebox][:dir]}/deployments/torquebox-backstage-knob.yml")
+  if(File.exists?("#{node[:torquebox][:conf_dir]}/deployments/torquebox-backstage-knob.yml"))
     action :nothing
   else
     action :run
   end
 
-  if node[:torquebox][:rbenv_version]
-    rbenv_version node[:torquebox][:rbenv_version]
-  end
-
+  rbenv_version node[:torquebox][:rbenv_version]
   code <<-EOS
     eval `torquebox env`
     export TORQUEBOX_HOME
     export JBOSS_HOME
+    BACKSTAGE_HOME=`ruby -e 'print Gem::Specification.find_by_name("torquebox-backstage").gem_dir'`
 
+    chown -R #{node[:torquebox][:user]} $BACKSTAGE_HOME
     backstage deploy --secure=#{node[:torquebox][:backstage][:username]}:#{node[:torquebox][:backstage][:password]}
   EOS
 end

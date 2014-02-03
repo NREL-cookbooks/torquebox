@@ -10,11 +10,17 @@
 include_recipe "java"
 include_recipe "rbenv::system"
 
-node.set_unless[:torquebox][:bind_ip] = node[:ipaddress]
+service "jboss-as" do
+  action [:stop, :disable]
+end
 
-hostsfile_entry node[:torquebox][:bind_ip] do
-  hostname "local-torquebox-ip"
-  action :create
+file "/etc/init.d/jboss-as" do
+  action :delete
+end
+
+directory "/etc/jboss-as" do
+  action :delete
+  recursive true
 end
 
 if(node[:torquebox][:clustered] && !node[:torquebox][:multicast])
@@ -40,9 +46,38 @@ user node[:torquebox][:user] do
   home node[:torquebox][:dir]
 end
 
-# Setup the deployments directory outside of the torquebox installation
-# directory so that on upgrades the apps are persisted.
-directory "#{node[:torquebox][:dir]}/deployments" do
+# Install the server via a gem so we can reuse our existing rbenv JRuby system
+# install. This also allows us to upgrade the version of JRuby prior to a new,
+# official TorqueBox package being released (useful when JRuby security updates
+# are released, but TorqueBox takes a while to update).
+rbenv_gem "torquebox-server" do
+  rbenv_version node[:torquebox][:rbenv_version]
+  version node[:torquebox][:version]
+  notifies :run, "rbenv_script[setup-torquebox-gem-install]", :immediately
+  notifies :restart, "service[torquebox]"
+end
+
+# Symlink the current torquebox gem directory into a predictable system-wide
+# location.
+rbenv_script "setup-torquebox-gem-install" do
+  if(File.symlink?(node[:torquebox][:dir]))
+    action :nothing
+  else
+    action :run
+  end
+
+  rbenv_version node[:torquebox][:rbenv_version]
+  code <<-EOS
+    eval `torquebox env`
+    chown -R #{node[:torquebox][:user]} $TORQUEBOX_HOME
+    rm -rf #{node[:torquebox][:dir]}
+    ln -s $TORQUEBOX_HOME #{node[:torquebox][:dir]}
+  EOS
+end
+
+# Move the jboss "deployments" directory outside the gem so it will persist
+# across JRuby and TorqueBox upgrades.
+directory "#{node[:torquebox][:conf_dir]}/deployments" do
   recursive true
   owner node[:torquebox][:user]
   group(node[:common_writable_group] || "root")
@@ -50,6 +85,18 @@ directory "#{node[:torquebox][:dir]}/deployments" do
   action :create
 end
 
+directory "#{node[:torquebox][:dir]}/jboss/standalone/deployments" do
+  action :delete
+  recursive true
+  only_if { ::File.directory?("#{node[:torquebox][:dir]}/jboss/standalone/deployments") && !::File.symlink?("#{node[:torquebox][:dir]}/jboss/standalone/deployments") }
+end
+
+link "#{node[:torquebox][:dir]}/jboss/standalone/deployments" do
+  to "#{node[:torquebox][:conf_dir]}/deployments"
+end
+
+# Move the jboss "log" directory outside the gem so it's easier to find and
+# will persist across upgrades.
 directory node[:torquebox][:log_dir] do
   recursive true
   owner node[:torquebox][:user]
@@ -58,96 +105,51 @@ directory node[:torquebox][:log_dir] do
   action :create
 end
 
-# Install the server via a gem so we can reuse our existing rbenv JRuby system
-# install. This also allows us to upgrade the version of JRuby prior to a new,
-# official TorqueBox package being released (useful when JRuby security updates
-# are released, but TorqueBox takes a while to update).
-rbenv_gem "torquebox-server" do
-  if node[:torquebox][:rbenv_version]
-    rbenv_version node[:torquebox][:rbenv_version]
-  end
-
-  version node[:torquebox][:version]
-
-  # The big torquebox-server gem isn't available at rubygems.org:
-  # http://torquebox.org/news/2013/05/07/torquebox-2-3-1-released/
-  source "http://torquebox.org/rubygems"
-
-  notifies :run, "rbenv_script[setup-torquebox-gem-install]", :immediately
-  notifies :restart, "service[jboss-as]"
+directory "#{node[:torquebox][:dir]}/jboss/standalone/log" do
+  action :delete
+  only_if { ::File.directory?("#{node[:torquebox][:dir]}/jboss/standalone/log") && !::File.symlink?("#{node[:torquebox][:dir]}/jboss/standalone/log") }
 end
 
-# Make a few tweaks to the gem-based installation.
-rbenv_script "setup-torquebox-gem-install" do
-  if File.exists?("#{node[:torquebox][:dir]}/home")
-    action :nothing
-  else
-    action :run
-  end
-
-  if node[:torquebox][:rbenv_version]
-    rbenv_version node[:torquebox][:rbenv_version]
-  end
-
-  code <<-EOS
-    eval `torquebox env`
-
-    # Ensure the gem files are owned by the torquebox user (since it writes so
-    # various directories inside the gem).
-    chown -R #{node[:torquebox][:user]} $TORQUEBOX_HOME
-
-    # Move the jboss "deployments" directory outside the gem so it will persist
-    # across JRuby and TorqueBox upgrades.
-    mv $JBOSS_HOME/standalone/deployments/README.txt #{node[:torquebox][:dir]}/deployments/
-    rm -rf $JBOSS_HOME/standalone/deployments
-    ln -s #{node[:torquebox][:dir]}/deployments $JBOSS_HOME/standalone/deployments
-
-    # Move the jboss "log" directory outside the gem so it's easier to find and
-    # will persist across upgrades.
-    rm -rf $JBOSS_HOME/standalone/log
-    ln -s #{node[:torquebox][:log_dir]} $JBOSS_HOME/standalone/log
-
-    # Symlink the gem directory into a predictable system-wide location.
-    rm -f #{node[:torquebox][:dir]}/home
-    ln -s $TORQUEBOX_HOME #{node[:torquebox][:dir]}/home
-  EOS
+link "#{node[:torquebox][:dir]}/jboss/standalone/log" do
+  to node[:torquebox][:log_dir]
 end
 
 if(node[:torquebox][:clustered])
-  template "#{node[:torquebox][:dir]}/home/jboss/standalone/configuration/standalone-ha.xml" do
+  template "#{node[:torquebox][:dir]}/jboss/standalone/configuration/standalone-ha.xml" do
     source "standalone-ha.xml.erb"
     mode "0644"
     user node[:torquebox][:user]
     group "root"
-    notifies :restart, "service[jboss-as]"
+    notifies :restart, "service[torquebox]"
+  end
+else
+  template "#{node[:torquebox][:dir]}/jboss/standalone/configuration/standalone.xml" do
+    source "standalone.xml.erb"
+    mode "0644"
+    user node[:torquebox][:user]
+    group "root"
+    notifies :restart, "service[torquebox]"
   end
 end
 
-directory "/etc/jboss-as" do
-  recursive true
-  mode "0755"
-  user "root"
-  group "root"
-end
-
-template "/etc/jboss-as/jboss-as.conf" do
+template "#{node[:torquebox][:conf_dir]}/jboss-as.conf" do
   source "jboss-as.conf.erb"
   mode "0644"
   user "root"
   group "root"
   variables({ :options => node[:torquebox] })
-  notifies :restart, "service[jboss-as]"
+  notifies :restart, "service[torquebox]"
 end
 
-cookbook_file "/etc/init.d/jboss-as" do
-  source "jboss-as-standalone.sh"
+template "/etc/init.d/torquebox" do
+  source "jboss-as-standalone.sh.erb"
   mode "0755"
   user "root"
   group "root"
-  notifies :restart, "service[jboss-as]"
+  notifies :restart, "service[torquebox]"
 end
 
-service "jboss-as" do
+service "torquebox" do
   supports :restart => true, :status => true, :reload => true
   action [:enable, :start]
 end
