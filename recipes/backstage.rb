@@ -33,6 +33,18 @@ rbenv_gem "torquebox-backstage" do
   notifies :run, "rbenv_script[torquebox-backstage-deploy]", :immediately
 end
 
+rbenv_version = node[:torquebox][:rbenv_version] || node[:global][:global]
+real_gem_dir = "#{node[:rbenv][:root_path]}/versions/#{rbenv_version}/lib/ruby/gems/shared/gems/torquebox-backstage-#{node[:torquebox][:backstage][:version]}"
+
+execute "torquebox-backstage-gem-permissions" do
+  command "chown -R #{node[:torquebox][:user]} #{real_gem_dir}"
+  only_if do
+    uid = File.stat(real_gem_dir).uid
+    username = Etc.getpwuid(uid).name
+    username != node[:torquebox][:user]
+  end
+end
+
 rbenv_script "torquebox-backstage-deploy" do
   if(File.exists?("#{node[:torquebox][:conf_dir]}/deployments/torquebox-backstage-knob.yml"))
     action :nothing
@@ -45,9 +57,6 @@ rbenv_script "torquebox-backstage-deploy" do
     eval `torquebox env`
     export TORQUEBOX_HOME
     export JBOSS_HOME
-    BACKSTAGE_HOME=`ruby -e 'print Gem::Specification.find_by_name("torquebox-backstage").gem_dir'`
-
-    chown -R #{node[:torquebox][:user]} $BACKSTAGE_HOME
     backstage deploy --secure=#{node[:torquebox][:backstage][:username]}:#{node[:torquebox][:backstage][:password]}
   EOS
 end

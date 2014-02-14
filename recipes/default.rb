@@ -40,10 +40,12 @@ if(node[:torquebox][:clustered] && !node[:torquebox][:multicast])
   node.set[:torquebox][:peers].delete(node[:ipaddress])
 end
 
-user node[:torquebox][:user] do
-  system true
-  shell "/bin/false"
-  home node[:torquebox][:dir]
+unless node[:torquebox][:use_existing_user]
+  user node[:torquebox][:user] do
+    system true
+    shell "/bin/false"
+    home node[:torquebox][:dir]
+  end
 end
 
 # Install the server via a gem so we can reuse our existing rbenv JRuby system
@@ -53,26 +55,24 @@ end
 rbenv_gem "torquebox-server" do
   rbenv_version node[:torquebox][:rbenv_version]
   version node[:torquebox][:version]
-  notifies :run, "rbenv_script[setup-torquebox-gem-install]", :immediately
   notifies :restart, "service[torquebox]"
 end
 
 # Symlink the current torquebox gem directory into a predictable system-wide
 # location.
-rbenv_script "setup-torquebox-gem-install" do
-  if(File.symlink?(node[:torquebox][:dir]))
-    action :nothing
-  else
-    action :run
-  end
+rbenv_version = node[:torquebox][:rbenv_version] || node[:global][:global]
+real_gem_dir = "#{node[:rbenv][:root_path]}/versions/#{rbenv_version}/lib/ruby/gems/shared/gems/torquebox-server-#{node[:torquebox][:version]}-java"
+link node[:torquebox][:dir] do
+  to real_gem_dir
+end
 
-  rbenv_version node[:torquebox][:rbenv_version]
-  code <<-EOS
-    eval `torquebox env`
-    chown -R #{node[:torquebox][:user]} $TORQUEBOX_HOME
-    rm -rf #{node[:torquebox][:dir]}
-    ln -s $TORQUEBOX_HOME #{node[:torquebox][:dir]}
-  EOS
+execute "torquebox-gem-permissions" do
+  command "chown -R #{node[:torquebox][:user]} #{real_gem_dir}"
+  only_if do
+    uid = File.stat(real_gem_dir).uid
+    username = Etc.getpwuid(uid).name
+    username != node[:torquebox][:user]
+  end
 end
 
 # Move the jboss "deployments" directory outside the gem so it will persist
@@ -80,7 +80,7 @@ end
 directory "#{node[:torquebox][:conf_dir]}/deployments" do
   recursive true
   owner node[:torquebox][:user]
-  group(node[:common_writable_group] || "root")
+  group node[:torquebox][:user]
   mode "0775"
   action :create
 end
