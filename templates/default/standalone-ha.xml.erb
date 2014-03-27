@@ -63,7 +63,7 @@
     <profile>
         <subsystem xmlns='urn:jboss:domain:logging:1.2'>
             <console-handler name='CONSOLE'>
-                <level name='INFO'/>
+                <level name='${jboss.logging.level:INFO}'/>
                 <formatter>
                     <pattern-formatter pattern='%K{level}%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n'/>
                 </formatter>
@@ -89,7 +89,7 @@
                 <level name='WARN'/>
             </logger>
             <root-logger>
-                <level name='INFO'/>
+                <level name='${jboss.logging.level:INFO}'/>
                 <handlers>
                     <handler name='CONSOLE'/>
                     <handler name='FILE'/>
@@ -117,7 +117,7 @@
                     <locking isolation='REPEATABLE_READ'/>
                 </replicated-cache>
             </cache-container>
-            <cache-container name='web' aliases='polyglot torquebox standard-session-cache' default-cache='repl' module='org.jboss.as.clustering.web.infinispan'>
+            <cache-container name='web' aliases='standard-session-cache' default-cache='repl' module='org.jboss.as.clustering.web.infinispan'>
                 <transport lock-timeout='60000'/>
                 <replicated-cache name='repl' mode='ASYNC' batching='true' start='EAGER'>
                     <eviction strategy='LRU' max-entries='10000'/>
@@ -128,6 +128,10 @@
                     <eviction strategy='LRU' max-entries='10000'/>
                     <file-store passivation='false' purge='false'/>
                 </distributed-cache>
+            </cache-container>
+            <cache-container name='polyglot' default-cache="default">
+                <transport lock-timeout='60000'/>
+                <distributed-cache name="default" mode="ASYNC"/>
             </cache-container>
         </subsystem>
         <subsystem xmlns='urn:jboss:domain:jca:1.1'>
@@ -158,7 +162,7 @@
                 <protocol type='FD'/>
                 <protocol type='VERIFY_SUSPECT'/>
                 <protocol type='pbcast.NAKACK2'/>
-                <protocol type='UNICAST2'/>
+                <protocol type='UNICAST3'/>
                 <protocol type='pbcast.STABLE'/>
                 <protocol type='pbcast.GMS'/>
                 <protocol type='UFC'/>
@@ -184,7 +188,7 @@
                 <protocol type='FD'/>
                 <protocol type='VERIFY_SUSPECT'/>
                 <protocol type='pbcast.NAKACK2'/>
-                <protocol type='UNICAST2'/>
+                <protocol type='UNICAST3'/>
                 <protocol type='pbcast.STABLE'/>
                 <protocol type='pbcast.GMS'/>
                 <protocol type='UFC'/>
