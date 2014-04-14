@@ -6,7 +6,14 @@ default[:torquebox][:log_dir] = "/var/log/torquebox"
 default[:torquebox][:rbenv_version] = nil
 
 default[:torquebox][:jboss_opts] = []
-default[:torquebox][:append_java_opts] = []
+default[:torquebox][:java_opts] = [
+  "-Xms64m",
+  "-Xmx512m",
+  "-XX:MaxPermSize=256m",
+  "-Djava.net.preferIPv4Stack=true",
+  "-Djboss.modules.system.pkgs=$JBOSS_MODULES_SYSTEM_PKGS",
+  "-Djava.awt.headless=true",
+]
 default[:torquebox][:clustered] = false
 default[:torquebox][:http_port] = nil
 default[:torquebox][:max_threads] = nil

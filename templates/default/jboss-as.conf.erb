@@ -38,7 +38,9 @@ JBOSS_OPTS="$JBOSS_OPTS -b <%= node[:torquebox][:bind_ip] %>"
 JBOSS_OPTS="$JBOSS_OPTS -Dhttp.port=<%= node[:torquebox][:http_port] %>"
 <% end %>
 
-export APPEND_JAVA_OPTS="<%= node[:torquebox][:append_java_opts].join(" ") %>"
+<% if(node[:torquebox][:java_opts].any?) %>
+export JAVA_OPTS="<%= node[:torquebox][:java_opts].join(" ") %>"
+<% end %>
 
 <% if(node.recipe?("nodejs")) %>
 # So execjs can find node.js
