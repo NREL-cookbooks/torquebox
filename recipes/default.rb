@@ -10,6 +10,8 @@
 include_recipe "java"
 include_recipe "rbenv::system"
 
+# Cleanup old installations (we've changed some stuff around in the newer
+# cookbook).
 service "jboss-as" do
   action [:stop, :disable]
 end
@@ -21,6 +23,12 @@ end
 directory "/etc/jboss-as" do
   action :delete
   recursive true
+end
+
+directory node[:torquebox][:dir] do
+  action :delete
+  recursive true
+  not_if { File.symlink?(node[:torquebox][:dir]) }
 end
 
 if(node[:torquebox][:clustered] && !node[:torquebox][:multicast])
