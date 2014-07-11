@@ -1,4 +1,4 @@
-default[:torquebox][:version] = "3.1.0"
+default[:torquebox][:version] = "3.1.1"
 default[:torquebox][:user] = "torquebox"
 default[:torquebox][:dir] = "/opt/torquebox"
 default[:torquebox][:conf_dir] = "/etc/torquebox"
