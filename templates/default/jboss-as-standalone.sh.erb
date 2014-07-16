@@ -161,8 +161,12 @@ case "$1" in
       stop
       ;;
   restart)
+      <%- if(node[:torquebox][:restart_script]) %>
+      <%= node[:torquebox][:restart_script] %>
+      <%- else %>
       $0 stop
       $0 start
+      <%- end %>
       ;;
   status)
       status
