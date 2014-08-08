@@ -39,7 +39,7 @@ JBOSS_OPTS="$JBOSS_OPTS -Dhttp.port=<%= node[:torquebox][:http_port] %>"
 <% end %>
 
 <% if(node[:torquebox][:java_opts].any?) %>
-export JAVA_OPTS="<%= node[:torquebox][:java_opts].join(" ") %>"
+export JAVA_OPTS="<%= node[:torquebox][:java_opts].map { |o| o.gsub(/"/, '\"') }.join(" ") %>"
 <% end %>
 
 <% if(node.recipe?("nodejs")) %>
